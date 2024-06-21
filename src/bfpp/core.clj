@@ -1,6 +1,6 @@
 (ns bfpp.core)
 
-(def memsize 1024)
+(def memsize 16)
 
 (def bf-init-state {:data-pointer 0, :memory (into [] (repeat memsize 0))})
 
@@ -12,30 +12,54 @@
   [state value]
   (assoc-in state [:memory (:data-pointer state)] value))
 
+(defn with-data-pointer [state f] (update state :data-pointer f))
+
+(defn with-code-pointer [state f] (update state :code-pointer f))
+
+(defn with-current-memory-cell
+  [state f]
+  (update-in state [:memory (:data-pointer state)] f))
+
+(defn read-current-code-cell
+  [state]
+  (get-in state [:source-code (:code-pointer state)]))
+
+(defn advance-code-pointer-past-next-closing-bracket
+  [state]
+  (loop [state state]
+    (if (= \] (read-current-code-cell state))
+      (with-code-pointer state inc)
+      (recur (with-code-pointer state inc)))))
+
 (defn exec-command
   [state]
-  (condp = (get-in state [:source-code (:code-pointer state)])
+  (condp = (read-current-code-cell state)
     \> (-> state
-           (update :data-pointer inc)
-           (update :code-pointer inc))
+           (with-data-pointer inc)
+           (with-code-pointer inc))
     \< (if (pos? (:data-pointer state))
          (-> state
-             (update :data-pointer dec)
-             (update :code-pointer inc))
+             (with-data-pointer dec)
+             (with-code-pointer inc))
          {:error "[Error] Data underflow"})
     \+ (-> state
-           (update-in [:memory (:data-pointer state)] inc)
-           (update :code-pointer inc))
+           (with-current-memory-cell inc)
+           (with-code-pointer inc))
     \- (-> state
-           (update-in [:memory (:data-pointer state)] dec)
-           (update :code-pointer inc))
+           (with-current-memory-cell dec)
+           (with-code-pointer inc))
     \. (do (-> (read-current-memory-cell state)
                (char)
                (print))
-           (update state :code-pointer inc))
+           (with-code-pointer state inc))
     \, (-> state
            (write-current-memory-cell (long (first (read-line))))
-           (update :code-pointer inc))))
+           (with-code-pointer inc))
+    \[ (if (zero? (read-current-memory-cell state))
+         (recur (with-code-pointer state inc))
+         (advance-code-pointer-past-next-closing-bracket state))
+    ;; Fall through - just advance the code pointer
+    (with-code-pointer state inc)))
 
 (defn execute
   [source-code]
