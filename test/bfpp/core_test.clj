@@ -31,11 +31,14 @@
     "A `,` takes char from input and puts its ascii in current memory cell"
     (is (= 81 (c/read-current-memory-cell (with-in-str "Q" (c/execute ","))))))
   (testing
-    "If data-pointer is pointing to zero a `[` continues to next instruction"
-    (is-current-cell-after-exec "[++" 2))
+    "If data-pointer is pointing to nonzero a `[` continues to next instruction"
+    (is-current-cell-after-exec "+[-]" 0))
   (testing
-    "If data-pointer points to non-zero a `[` advnces code pointer past corresponding `]`"
-    (is-current-cell-after-exec "-[+]-" -2))
+    "If data-pointer points to zero a `[` advnces code pointer past corresponding `]`"
+    (is-current-cell-after-exec "[+]-" -1))
+  #_(testing
+      "If data-pointer points to a `]` it jumps back to corresponding `[`"
+      (is-current-cell-after-exec "++++[>+<-]>" 4))
   #_(testing
       "When code-pointer jumps to closing bracket, nested brackets are skipped"
       (is-current-cell-after-exec "+[[]+]-" 0)))

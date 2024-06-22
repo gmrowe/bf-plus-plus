@@ -24,7 +24,7 @@
   [state]
   (get-in state [:source-code (:code-pointer state)]))
 
-(defn advance-code-pointer-past-next-closing-bracket
+(defn jump-code-pointer-past-corresponding-closing-bracket
   [state]
   (loop [state state]
     (if (= \] (read-current-code-cell state))
@@ -56,8 +56,12 @@
            (write-current-memory-cell (long (first (read-line))))
            (with-code-pointer inc))
     \[ (if (zero? (read-current-memory-cell state))
-         (recur (with-code-pointer state inc))
-         (advance-code-pointer-past-next-closing-bracket state))
+         (jump-code-pointer-past-corresponding-closing-bracket state)
+         (recur (with-code-pointer state inc)))
+    \] (loop [state state]
+         (if (= \[ (read-current-code-cell state))
+           state
+           (recur (with-code-pointer state dec))))
     ;; Fall through - just advance the code pointer
     (with-code-pointer state inc)))
 
