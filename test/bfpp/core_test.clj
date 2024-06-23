@@ -56,7 +56,9 @@
     ")
     (is-current-cell-after-exec ">++>+++++<<>[<+>>[<<+>>-]<-]<" 7))
   (testing "A `:` prints the value of the current cell as an intger"
-    (is (= "65" (with-out-str (with-in-str "A" (c/execute ",:")))))))
+    (is (= "65" (with-out-str (with-in-str "A" (c/execute ",:"))))))
+  (testing "A `;` takes an integer from input and stores it as an integer"
+    (is (= "A" (with-out-str (with-in-str "65" (c/execute ";.")))))))
 
 
 

@@ -79,15 +79,18 @@
     \: (do (-> (read-current-memory-cell state)
                (print))
            (with-code-pointer state inc))
+    \; (-> state
+           (write-current-memory-cell (parse-long (read-line)))
+           (with-code-pointer inc))
     ;; Fall through - just advance the code pointer
     (with-code-pointer state inc)))
 
 (defn execute
   [source-code]
-  (loop [state (-> bf-init-state
-                   (assoc :source-code (into [] source-code))
-                   (assoc :code-pointer 0))]
-    (if (and (not (:error state))
-             (< (:code-pointer state) (count (:source-code state))))
-      (recur (exec-command state))
-      state)))
+  (loop [{:keys [error source-code code-pointer], :as state}
+           (-> bf-init-state
+               (assoc :source-code (into [] source-code))
+               (assoc :code-pointer 0))]
+    (cond error (do (println error) state)
+          (< code-pointer (count source-code)) (recur (exec-command state))
+          :else state)))
