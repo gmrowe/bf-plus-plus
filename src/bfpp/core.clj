@@ -87,6 +87,7 @@
            (with-code-pointer inc))
     \$ (-> state
            (write-current-memory-cell (peek (:stack state)))
+           (update :stack pop)
            (with-code-pointer inc))
     ;; Fall through - just advance the code pointer
     (with-code-pointer state inc)))
