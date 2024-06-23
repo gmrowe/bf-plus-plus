@@ -59,4 +59,13 @@
     (is (= "65" (with-out-str (with-in-str "A" (c/execute ",:"))))))
   (testing "A `;` takes an integer from input and stores it as an integer"
     (is (= "A" (with-out-str (with-in-str "65" (c/execute ";."))))))
-  #_(testing "The internal stack starts out empty" (is (nil? ()))))
+  (testing "The internal stack starts out empty"
+    (is (nil? (:stack c/bf-init-state))))
+  (testing "A `#` puts the value of the current cell on the top of the stack"
+    (is (= 5
+           (-> (c/execute "+++++#")
+               :stack
+               peek))))
+  (testing
+    "A `$` takes the value off the top of the stack and copies into current cell"
+    (is-current-cell-after-exec "+++++#>$" 5)))

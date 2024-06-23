@@ -82,6 +82,12 @@
     \; (-> state
            (write-current-memory-cell (parse-long (read-line)))
            (with-code-pointer inc))
+    \# (-> state
+           (update :stack (fnil conj (list)) (read-current-memory-cell state))
+           (with-code-pointer inc))
+    \$ (-> state
+           (write-current-memory-cell (peek (:stack state)))
+           (with-code-pointer inc))
     ;; Fall through - just advance the code pointer
     (with-code-pointer state inc)))
 
