@@ -14,7 +14,7 @@
   (testing "The `<` operator decreases the data-pointer"
     (is (zero? (:data-pointer (c/execute "><")))))
   (testing "If data-pointer goes negative, an error is thrown"
-    (is (some? (:error (c/execute "<")))))
+    (is (c/error? (c/execute "<"))))
   (testing "All data is zero initialized" (is-current-cell-after-exec "" 0))
   (testing "A `+` increments the value in the current memory cell"
     (is-current-cell-after-exec "+" 1))
@@ -58,7 +58,5 @@
   (testing "A `:` prints the value of the current cell as an intger"
     (is (= "65" (with-out-str (with-in-str "A" (c/execute ",:"))))))
   (testing "A `;` takes an integer from input and stores it as an integer"
-    (is (= "A" (with-out-str (with-in-str "65" (c/execute ";.")))))))
-
-
-
+    (is (= "A" (with-out-str (with-in-str "65" (c/execute ";."))))))
+  #_(testing "The internal stack starts out empty" (is (nil? ()))))

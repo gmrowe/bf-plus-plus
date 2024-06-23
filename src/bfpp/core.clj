@@ -85,12 +85,14 @@
     ;; Fall through - just advance the code pointer
     (with-code-pointer state inc)))
 
+(defn error? [state] (some? (:error state)))
+
 (defn execute
   [source-code]
   (loop [{:keys [error source-code code-pointer], :as state}
            (-> bf-init-state
                (assoc :source-code (into [] source-code))
                (assoc :code-pointer 0))]
-    (cond error (do (println error) state)
+    (cond (error? state) (do (println error) state)
           (< code-pointer (count source-code)) (recur (exec-command state))
           :else state)))
