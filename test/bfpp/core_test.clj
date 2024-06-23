@@ -36,11 +36,27 @@
   (testing
     "If data-pointer points to zero a `[` advnces code pointer past corresponding `]`"
     (is-current-cell-after-exec "[+]-" -1))
-  #_(testing
-      "If data-pointer points to a `]` it jumps back to corresponding `[`"
-      (is-current-cell-after-exec "++++[>+<-]>" 4))
-  #_(testing
-      "When code-pointer jumps to closing bracket, nested brackets are skipped"
-      (is-current-cell-after-exec "+[[]+]-" 0)))
+  (testing "If data-pointer points to a `]` it jumps back to corresponding `[`"
+    (is-current-cell-after-exec "++++[>+<-]>" 4))
+  (testing
+    "When code-pointer jumps to closing bracket, nested brackets are skipped"
+    (is-current-cell-after-exec "[[]+]" 0))
+  (testing "Nested loops jump to correct locations (see comment above)"
+    (comment
+      "|*A | B | C | = Add numbers in B and C and store the result in A
+           >++>+++++<< | Store 2 and 5 in cell B and C
+           >[          | Loop on cell B
+             <+>       | Increment A
+             >[        | Loop on cell C
+                <<+>>  | Increment A
+                -      | Decrement C
+              ]<       | End loop on C
+             -         | Decrement A
+           ]<          | End loop on B
+    ")
+    (is-current-cell-after-exec ">++>+++++<<>[<+>>[<<+>>-]<-]<" 7))
+  (testing "A `:` prints the value of the current cell as an intger"
+    (is (= "65" (with-out-str (with-in-str "A" (c/execute ",:")))))))
+
 
 

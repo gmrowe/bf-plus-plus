@@ -26,10 +26,27 @@
 
 (defn jump-code-pointer-past-corresponding-closing-bracket
   [state]
-  (loop [state state]
-    (if (= \] (read-current-code-cell state))
-      (with-code-pointer state inc)
-      (recur (with-code-pointer state inc)))))
+  (loop [state (with-code-pointer state inc)
+         nesting-level 0]
+    (cond (= \] (read-current-code-cell state))
+            (if (zero? nesting-level)
+              (with-code-pointer state inc)
+              (recur (with-code-pointer state inc) (dec nesting-level)))
+          (= \[ (read-current-code-cell state))
+            (recur (with-code-pointer state inc) (inc nesting-level))
+          :else (recur (with-code-pointer state inc) nesting-level))))
+
+(defn jump-code-pointer-to-corresponding-opening-bracket
+  [state]
+  (loop [state (with-code-pointer state dec)
+         nesting-level 0]
+    (cond (= \] (read-current-code-cell state))
+            (recur (with-code-pointer state dec) (dec nesting-level))
+          (= \[ (read-current-code-cell state))
+            (if (zero? nesting-level)
+              state
+              (recur (with-code-pointer state dec) (inc nesting-level)))
+          :else (recur (with-code-pointer state dec) nesting-level))))
 
 (defn exec-command
   [state]
@@ -58,10 +75,10 @@
     \[ (if (zero? (read-current-memory-cell state))
          (jump-code-pointer-past-corresponding-closing-bracket state)
          (recur (with-code-pointer state inc)))
-    \] (loop [state state]
-         (if (= \[ (read-current-code-cell state))
-           state
-           (recur (with-code-pointer state dec))))
+    \] (jump-code-pointer-to-corresponding-opening-bracket state)
+    \: (do (-> (read-current-memory-cell state)
+               (print))
+           (with-code-pointer state inc))
     ;; Fall through - just advance the code pointer
     (with-code-pointer state inc)))
 
