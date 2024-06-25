@@ -4,7 +4,7 @@
 
 (defn is-current-cell-after-exec
   [program expected]
-  (is (= expected (c/read-current-memory-cell (c/execute program)))))
+  (is (= expected (c/read-mem (c/execute program)))))
 
 (deftest interpret-test
   (testing "The data pointer in the initial state points to 0"
@@ -29,7 +29,7 @@
     (is-current-cell-after-exec "+++++++++++++++++++++++++++++++++." 33))
   (testing
     "A `,` takes char from input and puts its ascii in current memory cell"
-    (is (= 81 (c/read-current-memory-cell (with-in-str "Q" (c/execute ","))))))
+    (is (= 81 (c/read-mem (with-in-str "Q" (c/execute ","))))))
   (testing
     "If data-pointer is pointing to nonzero a `[` continues to next instruction"
     (is-current-cell-after-exec "+[-]" 0))
