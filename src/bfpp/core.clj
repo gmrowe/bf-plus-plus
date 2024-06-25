@@ -4,85 +4,88 @@
 
 (def bf-init-state {:data-pointer 0, :memory (into [] (repeat memsize 0))})
 
-(defn read-current-memory-cell
-  [state]
-  (nth (:memory state) (:data-pointer state)))
+(defn read-mem [state] (nth (:memory state) (:data-pointer state)))
 
-(defn write-current-memory-cell
+(defn write-mem
   [state value]
   (assoc-in state [:memory (:data-pointer state)] value))
 
-(defn with-data-pointer [state f] (update state :data-pointer f))
+(defn update-mem [state f] (update-in state [:memory (:data-pointer state)] f))
 
-(defn with-code-pointer [state f] (update state :code-pointer f))
+(defn update-data-pointer [state f] (update state :data-pointer f))
 
-(defn with-current-memory-cell
-  [state f]
-  (update-in state [:memory (:data-pointer state)] f))
+(defn update-code-pointer [state f] (update state :code-pointer f))
 
-(defn read-current-code-cell
+(defn read-command [state] (get-in state [:source-code (:code-pointer state)]))
+
+(defn jmp-to-close-bracket
   [state]
-  (get-in state [:source-code (:code-pointer state)]))
+  (loop [state (update-code-pointer state inc)
+         nesting-level 0]
+    (condp = (read-command state)
+      \] (if (zero? nesting-level)
+           (update-code-pointer state inc)
+           (recur (update-code-pointer state inc) (dec nesting-level)))
+      \[ (recur (update-code-pointer state inc) (inc nesting-level))
+      ;; Fall-through
+      (recur (update-code-pointer state inc) nesting-level))))
+
+(defn jmp-to-open-bracket
+  [state]
+  (loop [state (update-code-pointer state dec)
+         nesting-level 0]
+    (condp = (read-command state)
+      \] (recur (update-code-pointer state dec) (dec nesting-level))
+      \[ (if (zero? nesting-level)
+           state
+           (recur (update-code-pointer state dec) (inc nesting-level)))
+      ;; Fall-through
+      (recur (update-code-pointer state dec) nesting-level))))
 
 (defn exec-command
   [state]
-  (condp = (read-current-code-cell state)
+  (condp = (read-command state)
     \> (-> state
-           (with-data-pointer inc)
-           (with-code-pointer inc))
+           (update-data-pointer inc)
+           (update-code-pointer inc))
     \< (if (pos? (:data-pointer state))
          (-> state
-             (with-data-pointer dec)
-             (with-code-pointer inc))
-         {:error "[Error] Data underflow"})
+             (update-data-pointer dec)
+             (update-code-pointer inc))
+         {:error "[Error] Buffer underflow"})
     \+ (-> state
-           (with-current-memory-cell inc)
-           (with-code-pointer inc))
+           (update-mem inc)
+           (update-code-pointer inc))
     \- (-> state
-           (with-current-memory-cell dec)
-           (with-code-pointer inc))
-    \. (do (-> (read-current-memory-cell state)
+           (update-mem dec)
+           (update-code-pointer inc))
+    \. (do (-> state
+               (read-mem)
                (char)
                (print))
-           (with-code-pointer state inc))
+           (update-code-pointer state inc))
     \, (-> state
-           (write-current-memory-cell (long (first (read-line))))
-           (with-code-pointer inc))
-    \[ (if (zero? (read-current-memory-cell state))
-         (loop [state (with-code-pointer state inc)
-                nesting-level 0]
-           (cond (= \] (read-current-code-cell state))
-                   (if (zero? nesting-level)
-                     (with-code-pointer state inc)
-                     (recur (with-code-pointer state inc) (dec nesting-level)))
-                 (= \[ (read-current-code-cell state))
-                   (recur (with-code-pointer state inc) (inc nesting-level))
-                 :else (recur (with-code-pointer state inc) nesting-level)))
-         (recur (with-code-pointer state inc)))
-    \] (loop [state (with-code-pointer state dec)
-              nesting-level 0]
-         (cond (= \] (read-current-code-cell state))
-                 (recur (with-code-pointer state dec) (dec nesting-level))
-               (= \[ (read-current-code-cell state))
-                 (if (zero? nesting-level)
-                   state
-                   (recur (with-code-pointer state dec) (inc nesting-level)))
-               :else (recur (with-code-pointer state dec) nesting-level)))
-    \: (do (-> (read-current-memory-cell state)
-               (print))
-           (with-code-pointer state inc))
+           (write-mem (long (first (read-line))))
+           (update-code-pointer inc))
+    \[ (if (zero? (read-mem state))
+         (jmp-to-close-bracket state)
+         (update-code-pointer state inc))
+    \] (if (zero? (read-mem state))
+         (update-code-pointer state inc)
+         (jmp-to-open-bracket state))
+    \: (do (print (read-mem state)) (update-code-pointer state inc))
     \; (-> state
-           (write-current-memory-cell (parse-long (read-line)))
-           (with-code-pointer inc))
+           (write-mem (parse-long (read-line)))
+           (update-code-pointer inc))
     \# (-> state
-           (update :stack (fnil conj (list)) (read-current-memory-cell state))
-           (with-code-pointer inc))
+           (update :stack (fnil conj (list)) (read-mem state))
+           (update-code-pointer inc))
     \$ (-> state
-           (write-current-memory-cell (peek (:stack state)))
+           (write-mem (peek (:stack state)))
            (update :stack pop)
-           (with-code-pointer inc))
+           (update-code-pointer inc))
     ;; Fall through - just advance the code pointer
-    (with-code-pointer state inc)))
+    (update-code-pointer state inc)))
 
 (defn error? [state] (some? (:error state)))
 
